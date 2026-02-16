@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// --- BASE DE DATOS DE CLIENTES ---
 const DB_CLIENTES = [
   { local: "LA LEÑA TUPAC", ruc: "20486441713", razon: "LA LEÑA S.A.C." },
   { local: "LA LEÑA HABICH", ruc: "20486441713", razon: "LA LEÑA S.A.C." },
@@ -12,7 +11,7 @@ const DB_CLIENTES = [
   { local: "LA LEÑA COLONIAL", ruc: "20486765454", razon: "AC INVERSIONES INTERNACIONALES S.A.C." },
   { local: "LA LEÑA JR UNION", ruc: "20486765454", razon: "AC INVERSIONES INTERNACIONALES S.A.C." },
   { local: "LA LEÑA LOS OLIVOS", ruc: "20486765454", razon: "AC INVERSIONES INTERNACIONALES S.A.C." },
-  { local: "LA LEÑA STA ANITA", ruc: "20486765454", razon: "AC INVERSIONES INTERNACIONALES S.A.C." },
+  { local: "LA LEÑA MALL STA ANITA", ruc: "20486765454", razon: "AC INVERSIONES INTERNACIONALES S.A.C." },
   { local: "LA LEÑA SAN BORJA", ruc: "20486765454", razon: "AC INVERSIONES INTERNACIONALES S.A.C." },
   { local: "LA LEÑA BELLAVISTA", ruc: "20486765454", razon: "AC INVERSIONES INTERNACIONALES S.A.C." },
   { local: "LA LEÑA SAN MIGUEL", ruc: "20544782755", razon: "CASA HUERTA CLUB S.A.C." },
@@ -45,27 +44,25 @@ function useStickyState(defaultValue, key) {
 }
 
 function App() {
-  // Estados Generales
   const [cliente, setCliente] = useStickyState({ local: '', ruc: '', razonSocial: '' }, 'clienteData');
   const [modoManual, setModoManual] = useState(false);
   const [numeroCotizacion, setNumeroCotizacion] = useStickyState(92, 'numCotizacion'); 
   const [fecha, setFecha] = useStickyState('', 'fechaCot');
   
-  // Condiciones
   const [diasEjecucion, setDiasEjecucion] = useStickyState('02', 'diasEjec');
   const [numTrabajadores, setNumTrabajadores] = useStickyState('03', 'numTrab');
 
-  // 1. TRABAJOS
   const [items, setItems] = useStickyState([], 'itemsLista');
   const [nuevoItem, setNuevoItem] = useState({ desc: '', costo: '' });
-  const [baseImponible, setBaseImponible] = useStickyState('', 'baseImp');
 
-  // 2. MATERIALES
+  const [baseImponible, setBaseImponible] = useStickyState('', 'baseImpManual'); 
+  const [igvManual, setIgvManual] = useStickyState('', 'igvManual'); 
+  const [totalManoObra, setTotalManoObra] = useStickyState('', 'totalManoObraManual');
+
   const [materiales, setMateriales] = useStickyState([], 'matLista');
   const [inputMaterial, setInputMaterial] = useState({ cant: '', desc: '', costo: '' });
   const [totalMateriales, setTotalMateriales] = useStickyState('', 'totalMat');
 
-  // 3. HERRAMIENTAS (NUEVO)
   const [herramientas, setHerramientas] = useStickyState([], 'herramientasLista');
   const [inputHerramienta, setInputHerramienta] = useState({ nombre: '', uso: '' });
 
@@ -76,7 +73,6 @@ function App() {
     }
   }, []);
 
-  // --- HELPERS ---
   const handleSelectLocal = (e) => {
     const seleccion = e.target.value;
     if (seleccion === "MANUAL") {
@@ -103,7 +99,6 @@ function App() {
     handleInput(setNuevoItem, 'desc', nuevaDescripcion, true, nuevoItem);
   };
 
-  // --- LÓGICA TRABAJOS ---
   const agregarItem = () => {
     if (nuevoItem.desc.trim() === '') return;
     setItems([...items, nuevoItem]);
@@ -119,7 +114,6 @@ function App() {
     window.scrollTo(0, document.body.scrollHeight);
   };
 
-  // --- LÓGICA MATERIALES ---
   const agregarMaterial = () => {
     if (inputMaterial.desc.trim() === '') return;
     setMateriales([...materiales, inputMaterial]);
@@ -134,7 +128,6 @@ function App() {
     setMateriales(materiales.filter((_, i) => i !== index));
   };
 
-  // --- LÓGICA HERRAMIENTAS (NUEVO) ---
   const agregarHerramienta = () => {
     if (inputHerramienta.nombre.trim() === '') return;
     setHerramientas([...herramientas, inputHerramienta]);
@@ -149,13 +142,8 @@ function App() {
     setHerramientas(herramientas.filter((_, i) => i !== index));
   };
 
-  // CÁLCULOS
-  const base = parseFloat(baseImponible) || 0;
-  const igv = base * 0.18;
-  const totalManoObra = base + igv;
   const totalMat = parseFloat(totalMateriales) || 0;
 
-  // --- GENERAR PDF ---
   const generarPDF = async () => {
     try {
       const doc = new jsPDF();
@@ -163,7 +151,6 @@ function App() {
       const margenIzq = 14;
       let yPos = 20;
 
-      // HEADER
       doc.setFontSize(14);
       doc.setFont(undefined, 'bold');
       doc.text('HUARCAYA JANJE EDUARDO EMILIO', 105, yPos, null, null, 'center');
@@ -195,7 +182,6 @@ function App() {
       doc.text(razonSocialLines, margenIzq, yPos);
       yPos += (razonSocialLines.length * 5);
 
-      // 1. TRABAJOS
       yPos += 2; 
       autoTable(doc, {
         startY: yPos,
@@ -214,16 +200,15 @@ function App() {
       yPos = finalY + 5;
       doc.setFontSize(10);
       doc.text(`BASE IMPONIBLE`, 120, yPos);
-      doc.text(`S/ ${base.toFixed(2)}`, 190, yPos, null, null, 'right');
+      doc.text(`S/ ${parseFloat(baseImponible || 0).toFixed(2)}`, 190, yPos, null, null, 'right');
       yPos += 5;
-      doc.text(`IGV (18%)`, 120, yPos);
-      doc.text(`S/ ${igv.toFixed(2)}`, 190, yPos, null, null, 'right');
+      doc.text(`IGV (18%)`, 120, yPos); 
+      doc.text(`S/ ${parseFloat(igvManual || 0).toFixed(2)}`, 190, yPos, null, null, 'right');
       yPos += 5;
       doc.setFont(undefined, 'bold');
       doc.text(`TOTAL MANO DE OBRA`, 120, yPos);
-      doc.text(`S/ ${totalManoObra.toFixed(2)}`, 190, yPos, null, null, 'right');
+      doc.text(`S/ ${parseFloat(totalManoObra || 0).toFixed(2)}`, 190, yPos, null, null, 'right');
 
-      // 2. MATERIALES
       yPos += 10;
       if (yPos + 30 > pageHeight - 20) { doc.addPage(); yPos = 20; }
 
@@ -246,31 +231,23 @@ function App() {
         doc.text(`S/ ${totalMat.toFixed(2)}`, 190, yPos, null, null, 'right');
       }
 
-      // 3. HERRAMIENTAS (NUEVO PDF)
       yPos += 10;
       if (herramientas.length > 0) {
-          // Chequear espacio
           if (yPos + 30 > pageHeight - 20) { doc.addPage(); yPos = 20; }
-          
           autoTable(doc, {
             startY: yPos,
-            head: [['ITEM', 'HERRAMIENTAS Y EQUIPOS', 'USO']],
+            head: [['ITEM', 'HERRAMIENTAS Y EQUIPOS', 'PARA QUE SERA USADO']],
             body: herramientas.map((h, i) => [i + 1, h.nombre, h.uso]),
             theme: 'plain',
             styles: { fontSize: 9, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, overflow: 'linebreak' },
             headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold' },
-            columnStyles: { 
-                0: { cellWidth: 10, halign: 'center' }, 
-                1: { cellWidth: 80 }, 
-                2: { cellWidth: 'auto' } 
-            },
+            columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 80 }, 2: { cellWidth: 'auto' } },
             margin: { bottom: 20 }
           });
           finalY = doc.lastAutoTable.finalY;
           yPos = finalY + 5;
       }
 
-      // FOOTER
       const espacioNecesarioFooter = 60;
       yPos += 5;
       if (yPos + espacioNecesarioFooter > pageHeight - 10) { doc.addPage(); yPos = 20; }
@@ -295,8 +272,28 @@ function App() {
       doc.text(`CCI: 01131900020024987317`, margenIzq, yPos);
 
       const fileName = `Cotizacion_${numeroCotizacion}.pdf`;
-      doc.save(fileName);
+      let compartidoExitoso = false;
+      if (navigator.canShare && navigator.share) {
+        try {
+          const blob = doc.output('blob');
+          const file = new File([blob], fileName, { type: "application/pdf" });
+          if (navigator.canShare({ files: [file] })) {
+             await navigator.share({
+               files: [file],
+               title: 'Cotización',
+               text: `Cotización N° ${numeroCotizacion}`
+             });
+             compartidoExitoso = true;
+          }
+        } catch (e) {
+          console.log("Compartir cancelado o no soportado, descargando...");
+        }
+      }
+      if (!compartidoExitoso) {
+        doc.save(fileName);
+      }
       setNumeroCotizacion(parseInt(numeroCotizacion) + 1);
+
     } catch (error) {
       alert("Error: " + error.message);
     }
@@ -311,8 +308,8 @@ function App() {
       <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl">
         <div className="bg-orange-600 p-4 text-white text-center shadow-md flex justify-between items-center">
           <div>
-            <h1 className="text-xl font-bold">COTIZADOR V9</h1>
-            <p className="text-xs">Incluye Herramientas</p>
+            <h1 className="text-xl font-bold">COTIZADOR V18</h1>
+            <p className="text-xs">Todo Manual (Base, IGV, Total)</p>
           </div>
           <button onClick={limpiarTodo} className="text-xs bg-red-500 p-1 rounded">Borrar</button>
         </div>
@@ -351,7 +348,6 @@ function App() {
               value={cliente.razonSocial} readOnly={!modoManual} onChange={(e) => handleInput(setCliente, 'razonSocial', e.target.value, true, cliente)} />
           </section>
 
-          {/* 1. TRABAJOS */}
           <section>
             <h2 className="text-sm font-bold text-white bg-gray-700 p-2 rounded-t">1. DESCRIPCIÓN DEL TRABAJO</h2>
             <div className="border p-2 rounded-b bg-white">
@@ -370,15 +366,36 @@ function App() {
                 </div>
                 <div className="flex gap-2"><input type="number" placeholder="COSTO (OPCIONAL)" className="w-1/2 p-2 border rounded text-sm" value={nuevoItem.costo} onChange={e => setNuevoItem({...nuevoItem, costo: e.target.value})} /><button onClick={agregarItem} className="flex-1 bg-gray-700 text-white rounded font-bold">AGREGAR +</button></div>
               </div>
+              
               <div className="mt-4 pt-2 border-t">
-                 <div className="flex justify-between items-center mb-1"><span className="text-xs font-bold text-gray-600">BASE IMPONIBLE (S/):</span><input type="number" placeholder="0.00" className="w-24 p-2 border border-gray-400 rounded text-right font-bold" value={baseImponible} onChange={e => setBaseImponible(e.target.value)} /></div>
-                 <div className="flex justify-between items-center text-xs text-gray-500 mb-2 px-1"><span>IGV (18%):</span><span>S/ {igv.toFixed(2)}</span></div>
-                 <div className="flex justify-between items-center text-sm font-bold bg-gray-100 p-1 rounded"><span>TOTAL MANO OBRA:</span><span className="text-gray-800">S/ {totalManoObra.toFixed(2)}</span></div>
+                 <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-bold text-gray-600">BASE IMPONIBLE:</span>
+                    <input type="number" placeholder="0" className="w-24 p-2 border border-gray-400 rounded text-right font-bold" 
+                      value={baseImponible} 
+                      onChange={e => setBaseImponible(e.target.value)} 
+                    />
+                 </div>
+                 <div className="flex justify-between items-center text-xs text-gray-500 mb-2 px-1">
+                    <span className="font-bold">IGV (18%):</span>
+                    <input type="number" placeholder="0" className="w-24 p-1 border border-gray-300 rounded text-right text-xs" 
+                      value={igvManual} 
+                      onChange={e => setIgvManual(e.target.value)} 
+                    />
+                 </div>
+                 <div className="flex justify-between items-center text-sm font-bold bg-gray-100 p-1 rounded">
+                    <span>TOTAL MANO OBRA:</span>
+                    <input 
+                      type="number" 
+                      className="w-28 p-1 ml-2 border border-gray-300 rounded text-right font-bold text-gray-800 bg-white"
+                      placeholder="0"
+                      value={totalManoObra}
+                      onChange={e => setTotalManoObra(e.target.value)}
+                    />
+                 </div>
               </div>
             </div>
           </section>
 
-          {/* 2. MATERIALES */}
           <section>
             <h2 className="text-sm font-bold text-white bg-blue-800 p-2 rounded-t">2. MATERIALES</h2>
             <div className="border p-2 rounded-b bg-white">
@@ -397,7 +414,6 @@ function App() {
             </div>
           </section>
 
-          {/* 3. HERRAMIENTAS (NUEVA SECCIÓN) */}
           <section>
             <h2 className="text-sm font-bold text-white bg-teal-600 p-2 rounded-t">3. HERRAMIENTAS Y EQUIPOS</h2>
             <div className="border p-2 rounded-b bg-white">
@@ -414,13 +430,10 @@ function App() {
                   </div>
                 </div>
               ))}
-              
               <div className="mt-2 space-y-2">
-                <input placeholder="NOMBRE DE HERRAMIENTA..." className="w-full p-2 border rounded text-sm uppercase"
-                  value={inputHerramienta.nombre} onChange={e => handleInput(setInputHerramienta, 'nombre', e.target.value, true, inputHerramienta)} />
+                <input placeholder="NOMBRE DE HERRAMIENTA..." className="w-full p-2 border rounded text-sm uppercase" value={inputHerramienta.nombre} onChange={e => handleInput(setInputHerramienta, 'nombre', e.target.value, true, inputHerramienta)} />
                 <div className="flex gap-2">
-                    <input placeholder="¿PARA QUÉ SERÁ USADO?" className="flex-1 p-2 border rounded text-sm uppercase"
-                      value={inputHerramienta.uso} onChange={e => handleInput(setInputHerramienta, 'uso', e.target.value, true, inputHerramienta)} />
+                    <input placeholder="¿PARA QUÉ SERÁ USADO?" className="flex-1 p-2 border rounded text-sm uppercase" value={inputHerramienta.uso} onChange={e => handleInput(setInputHerramienta, 'uso', e.target.value, true, inputHerramienta)} />
                     <button onClick={agregarHerramienta} className="bg-teal-600 text-white px-4 rounded font-bold">AGREGAR +</button>
                 </div>
               </div>
